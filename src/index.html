@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'">
+<title>Ally</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="widget" id="w">
+  <div class="whead">
+    <span class="dot" id="hdot" aria-hidden="true"></span>
+    <span class="wtitle">ALLY</span>
+    <span class="pillbar"><span id="pU"></span><span id="pI">⚑ 0</span><span id="pT">☐ 0</span></span>
+    <button class="ic" id="opBtn" title="Settings" aria-label="Settings" aria-expanded="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+    <button class="ic on" id="pin" title="Always on top (on)" aria-label="Always on top"><svg viewBox="0 0 24 24"><path d="M12 17v5M9 3h6l-1 6 4 4H6l4-4z"/></svg></button>
+    <button class="ic" id="min" title="Compact" aria-label="Compact"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+    <button class="ic" id="close" title="Quit" aria-label="Quit"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+  <div class="oprow" id="oprow" hidden>
+    <label for="op">Opacity</label><input id="op" type="range" min="25" max="100"><span id="opv"></span>
+  </div>
+  <div class="oprow" id="wrow" hidden>
+    <label for="wd">Width</label><input id="wd" type="range" min="300" max="600" step="20"><span id="wdv"></span>
+  </div>
+  <div class="oprow" id="frow" hidden>
+    <span>Show</span>
+    <label class="fopt"><input type="checkbox" id="fjira">Jira tickets</label>
+    <label class="fopt"><input type="checkbox" id="fproj">Projects</label>
+    <label class="fopt" title="Your plan's 5-hour and weekly limits. Ally reads Claude Code's login on this computer to ask Anthropic for them."><input type="checkbox" id="flim">Usage limits</label>
+  </div>
+  <div class="oprow" id="jrow" hidden>
+    <span>Jira</span><span class="jwho" id="jwho"></span><button class="link" id="jedit">Connect</button>
+  </div>
+  <div class="ask" id="ask" hidden>
+    <div class="ahead">
+      <span class="st input" id="aDot"></span><span class="sname" id="aName"></span><span class="sstate input" id="aState"></span>
+      <span class="smeta" id="aMeta"></span>
+    </div>
+    <span class="qhdr" id="aHdr"></span>
+    <p class="q" id="aQ"></p>
+    <pre class="adetail" id="aDetail" hidden></pre>
+    <div class="opts" id="aOpts"></div>
+    <form class="other" id="aOther">
+      <input id="aText" autocomplete="off" aria-label="Your own answer">
+      <button class="send" aria-label="Send answer">↵</button>
+    </form>
+    <div class="afoot"><span>Double-click to open its terminal</span><span id="aNote"></span></div>
+  </div>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="false" data-t="usage">Usage</button>
+    <button class="tab" role="tab" aria-selected="true" data-t="sessions">Sessions<span class="n" id="sessN">0</span></button>
+    <button class="tab" role="tab" aria-selected="false" data-t="todo">Tasks<span class="n" id="openN">0</span></button>
+    <button class="tab" role="tab" aria-selected="false" data-t="projects">Projects<span class="n" id="projN">0</span></button>
+  </div>
+  <div class="body">
+    <div id="p-usage" hidden>
+      <div id="limits"></div>
+      <div class="stats">
+        <div class="stat"><div class="k">Tokens today</div><div class="v" id="tok">–</div></div>
+        <div class="stat"><div class="k">Replies today</div><div class="v" id="msgs">–</div></div>
+        <div class="stat spark"><div class="k">Tokens, last 12h</div><svg id="spk" viewBox="0 0 240 38" preserveAspectRatio="none"></svg></div>
+      </div>
+      <div class="foot"><span id="plan"></span><button class="link" id="upd" title="Refresh now">–</button></div>
+    </div>
+    <div id="p-sessions">
+      <div class="shead" id="sSum">0 sessions</div>
+      <ul class="slist" id="slist"></ul>
+    </div>
+    <div id="p-todo" hidden>
+      <form class="jform" id="jform" hidden>
+        <p class="jintro" id="jintro">Connect Jira to see your tickets here. Ally reads Jira directly, signed in as you: no Claude tokens.</p>
+        <div class="jway" id="jway-oauth">
+          <button class="jsave jbig" type="button" id="jsignin">Sign in with Atlassian</button>
+          <p class="jhint">Your browser opens Atlassian's page, where you choose what Ally may do.</p>
+          <div class="jsites" id="jsites" hidden>
+            <select id="jsite-pick" aria-label="Jira site"></select>
+            <button class="jsave" type="button" id="jsite-use">Use this site</button>
+          </div>
+          <button class="link" type="button" id="jtoken-way">Use an API token instead</button>
+        </div>
+        <div class="jway" id="jway-token" hidden>
+          <input id="jsite" placeholder="yourteam.atlassian.net" autocomplete="off" aria-label="Jira site">
+          <input id="jemail" type="email" placeholder="Atlassian email" autocomplete="off" aria-label="Atlassian email">
+          <input id="jtoken" type="password" placeholder="API token" autocomplete="off" aria-label="API token">
+          <div class="jrow">
+            <button class="link" type="button" id="jnew">Create an API token ↗</button>
+            <button class="jsave" id="jsave">Connect</button>
+          </div>
+          <button class="link" type="button" id="joauth-way">Sign in with Atlassian instead</button>
+        </div>
+        <div class="jrow">
+          <span></span>
+          <span class="jbtns"><button class="link" type="button" id="jforget" hidden>Disconnect</button><button class="link" type="button" id="jcancel">Cancel</button></span>
+        </div>
+        <p class="jmsg" id="jmsg"></p>
+      </form>
+      <form class="addrow" id="addf">
+        <input id="newt" placeholder="Add a personal task…" autocomplete="off">
+        <input id="newd" type="date" aria-label="Due date" title="Due date">
+        <select id="newp" aria-label="Priority"><option>P1</option><option selected>P2</option><option>P3</option></select>
+      </form>
+      <div class="filters" id="fview">
+        <span class="seg" role="group" aria-label="View"><button data-v="list" aria-pressed="true">List</button><button data-v="matrix" aria-pressed="false" title="Urgent × important, from due dates and priorities. Drag a task to change them.">Matrix</button></span>
+        <span class="grow"></span>
+        <button class="ic" id="jrefresh" title="Refresh from Jira" aria-label="Refresh from Jira"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg></button>
+      </div>
+      <div class="filters wrap" id="fstatus">
+        <button class="chip" aria-pressed="true" data-s="todo">To Do<span class="c"></span></button>
+        <button class="chip" aria-pressed="true" data-s="doing">In Progress<span class="c"></span></button>
+        <button class="chip" aria-pressed="false" data-s="done">Done<span class="c"></span></button>
+      </div>
+      <div class="filters wrap" id="fscope"></div>
+      <div class="jstate" id="jstate"></div>
+      <ul class="list" id="list"></ul>
+      <div class="matrix" id="matrix" hidden></div>
+    </div>
+    <div id="p-projects" hidden>
+      <div class="filters"><span class="jstate" id="pstate"></span><span class="grow"></span>
+        <button class="ic" id="prefresh" title="Refresh from Jira" aria-label="Refresh from Jira"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg></button>
+      </div>
+      <form class="pform" id="pform" hidden></form>
+      <ul class="plist" id="plist"></ul>
+      <div class="pfoot">
+        <button class="link" id="pnew">+ New project</button>
+        <button class="link" id="pfollow" title="Follow someone else's epic or label">Follow</button>
+        <span class="grow"></span>
+        <button class="link" id="parch" hidden></button>
+        <button class="link" id="pboard" title="Copies your projects, then opens the board to paste them. Right-click for more.">Update board</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="menu" id="menu" role="menu" hidden></div>
+<div class="notice" id="notice" role="status" hidden>
+  <div class="nrow"><span class="ntext" id="ntext"></span><button class="link" id="nchange" hidden>Change</button><button class="ic nclose" id="nclose" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <form class="nform" id="nform" hidden>
+    <label id="nskillrow">Skill <select id="nskill"></select></label>
+    <label>Folder <select id="nfolder"></select></label>
+    <div class="nbtns"><span class="nhint">Remembered for</span><b id="nscope"></b><span class="grow"></span><button class="jsave">Run again</button></div>
+  </form>
+</div>
+<input id="redate" type="date" class="hiddendate" tabindex="-1" aria-hidden="true">
+<script src="todos.js"></script>
+<script src="tasks.js"></script>
+<script src="matrix.js"></script>
+<script src="projects.js"></script>
+<script src="ask.js"></script>
+<script src="renderer.js"></script>
+</body>
+</html>

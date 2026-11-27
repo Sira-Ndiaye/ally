@@ -1,0 +1,174 @@
+name: CI
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: |
+          npm ci --no-fund --no-audit
+          node node_modules/electron/install.js
+          node scripts/check-deps.js
+
+      - name: Unit tests
+        run: npm test
+
+      # A Claude Meter install (Ally's former name) that the installer must upgrade.
+      - name: Seed a Claude Meter install
+        run: |
+          mkdir -p ~/.claude-meter ~/.claude
+          echo '[{"id":"t1","text":"kept"}]' > ~/.claude-meter/todos.json
+          echo '{"opacity":55}' > ~/.claude-meter/window.json
+          echo '{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"\"node\" \"/old/claude-meter/hook/hook.js\""}]}]}}' > ~/.claude/settings.json
+          case "$RUNNER_OS" in
+            Windows)
+              mkdir -p "$APPDATA/Microsoft/Windows/Start Menu/Programs/Startup"
+              touch "$APPDATA/Microsoft/Windows/Start Menu/Programs/Claude Meter.lnk"
+              touch "$APPDATA/Microsoft/Windows/Start Menu/Programs/Startup/Claude Meter.lnk" ;;
+            macOS)
+              mkdir -p ~/Library/LaunchAgents && touch ~/Library/LaunchAgents/com.claude-meter.plist ;;
+            Linux)
+              mkdir -p ~/.local/share/applications ~/.config/autostart
+              touch ~/.local/share/applications/claude-meter.desktop ~/.config/autostart/claude-meter.desktop ;;
+          esac
+
+      # The real installer, as a user would run it, then: is the app up, are its files there?
+      - name: Installer
+        run: |
+          case "$RUNNER_OS" in
+            Windows) ./install.sh && sleep 8 && tasklist | grep -i electron.exe ;;
+            macOS) ./install.sh && sleep 8 && pgrep -fl 'Electron.app/Contents/MacOS/Electron' ;;
+            Linux)
+              xvfb-run -a bash -c "./install.sh && sleep 8 && pgrep -fl electron/dist/electron" ||
+                { cat ~/.ally/launch.log; exit 1; } ;;
+          esac
+          grep -q 'hook/hook.js' ~/.claude/settings.json
+          case "$RUNNER_OS" in
+            Windows)
+              test -f "$APPDATA/Microsoft/Windows/Start Menu/Programs/Ally.lnk"
+              test -f "$APPDATA/Microsoft/Windows/Start Menu/Programs/Startup/Ally.lnk" ;;
+            macOS)
+              test -x ~/.local/bin/ally
+              test -f ~/Library/LaunchAgents/com.sira-ndiaye.ally.plist ;;
+            Linux)
+              test -x ~/.local/bin/ally
+              test -f ~/.local/share/applications/ally.desktop
+              test -f ~/.config/autostart/ally.desktop ;;
+          esac
+          # The Claude Meter install was upgraded: data moved, old hook and entries gone.
+          grep -q kept ~/.ally/todos.json
+          grep -q 55 ~/.ally/window.json
+          test ! -e ~/.claude-meter
+          # set -e ignores a negated command, hence the explicit exit.
+          ! grep -q /old/claude-meter ~/.claude/settings.json || exit 1
+          test -z "$(find "$APPDATA/Microsoft/Windows/Start Menu" ~/Library/LaunchAgents ~/.local/share/applications ~/.config/autostart -iname '*claude*meter*' 2>/dev/null)"
+
+      # The real app, in a throwaway home folder. Linux runners have no display.
+      - name: Smoke test
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a npm run -s smoke; else npm run -s smoke; fi
+
+      - name: Uninstaller
+        run: |
+          ./install.sh --remove
+          ! grep -q 'hook/hook.js' ~/.claude/settings.json
+
+  # Plan with Claude: a real terminal opens and a stand-in for claude must get the exact
+  # arguments and folder (scripts/terminal-probe.js). macOS runners cannot script
+  # Terminal (it needs an automation permission), so macOS is checked by hand.
+  terminal:
+    name: terminal ${{ matrix.terminal }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, terminal: xterm }
+          - { os: ubuntu-latest, terminal: gnome-terminal }
+          - { os: ubuntu-latest, terminal: konsole }
+          - { os: windows-latest, terminal: console }
+          - { os: windows-latest, terminal: wt }
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Install the terminal
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -q && sudo apt-get install -yq ${{ matrix.terminal }} dbus-x11
+      - name: Probe
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then
+            xvfb-run -a dbus-run-session -- node scripts/terminal-probe.js --terminal ${{ matrix.terminal }}
+          elif [ "${{ matrix.terminal }}" = wt ] && ! where wt.exe >/dev/null 2>&1; then
+            echo "::notice::Windows Terminal is not installed on this runner; Ally uses the console there"
+          else
+            node scripts/terminal-probe.js --terminal ${{ matrix.terminal }}
+          fi
+
+  # The package as users get it: packed, installed with npm -g, run as `ally`.
+  npm-package:
+    name: npm package on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: Pack and install globally
+        run: |
+          npm pack
+          npm install -g ./sira-ndiaye-ally-*.tgz --no-fund --no-audit
+          ally --version
+
+      - name: ally setup
+        run: |
+          case "$RUNNER_OS" in
+            Windows) ally setup && sleep 8 && tasklist | grep -i electron.exe ;;
+            macOS) ally setup && sleep 8 && pgrep -fl 'Electron.app/Contents/MacOS/Electron' ;;
+            Linux)
+              xvfb-run -a bash -c "ally setup && sleep 8 && pgrep -fl electron/dist/electron" ||
+                { cat ~/.ally/launch.log; exit 1; } ;;
+          esac
+          grep -q 'hook/hook.js' ~/.claude/settings.json
+          # The command comes from npm: setup must not shadow it with its own launcher.
+          test ! -e ~/.local/bin/ally
+
+      - name: ally remove
+        run: |
+          ally remove
+          ! grep -q 'hook/hook.js' ~/.claude/settings.json

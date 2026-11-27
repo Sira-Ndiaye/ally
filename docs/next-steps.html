@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ally next steps</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE work: a proposal to decide on, conclusion first
+   IDEA Ally's own widget, opened on a new Matrix view, beside the route of phases
+   PICTURE a live widget mock-up: tickets and todos placed by due date and priority, draggable
+   COLOUR white / night ground, Ally's dark glass widget, its accent #e58b6c and P1 P2 P3 colours
+   TYPE Geist 700 + Geist
+   LAYOUT title across the top, widget + option picker beneath; phone: title, widget, options */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#101217);--ink:light-dark(#14161c,#eef1f6);--mut:light-dark(#5c6472,#9aa3b2);--line:light-dark(#e3e5ea,#262a33);--soft:light-dark(#f4f5f7,#171a21);--acc:#e58b6c;--acc-ink:light-dark(#b4532f,#f0a689);--p1:#e5604f;--p2:#e9b44c;--p3:#6aa6e8;--ok:#4fbf8a;--wbg:#14161c;--wfg:#eef1f6;--wmut:#9aa3b2;--wline:rgba(255,255,255,.09)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Geist,system-ui,sans-serif;overflow-x:clip}
+.band{padding:clamp(28px,4vw,56px) max(5vw,16px)}
+.wrap{max-width:1180px;margin:0 auto}
+h1{font-size:clamp(32px,4.6vw,48px);line-height:1.05;letter-spacing:-.02em;margin:0 0 14px;text-wrap:balance;font-weight:700}
+h2{font-size:clamp(24px,3vw,32px);line-height:1.1;letter-spacing:-.015em;margin:0 0 10px;text-wrap:balance;font-weight:700}
+h3{font-size:17px;margin:0 0 4px;font-weight:600}
+p{margin:0 0 12px;max-width:68ch}
+.lede{font-size:18px;color:var(--mut);max-width:62ch}
+.lede b{color:var(--ink)}
+.hero{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:clamp(20px,4vw,56px);align-items:start;margin-top:26px}
+@media(max-width:820px){.hero{grid-template-columns:minmax(0,1fr)}}
+/* the widget */
+.widget{background:var(--wbg);color:var(--wfg);border-radius:14px;border:1px solid rgba(255,255,255,.12);box-shadow:0 18px 40px -24px rgba(0,0,0,.55);font-size:13px;overflow:hidden;max-width:440px}
+.whead{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--wline)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.wt{font-weight:600;letter-spacing:.04em;font-size:12px}
+.pills{margin-left:auto;color:var(--wmut);font-size:12px;display:flex;gap:10px}
+.tabs{display:flex;gap:2px;padding:6px 8px 0;border-bottom:1px solid var(--wline)}
+.tab{padding:7px 9px;color:var(--wmut);font-size:12.5px;border-bottom:2px solid transparent}
+.tab.on{color:var(--wfg);border-color:var(--acc)}
+.tools{display:flex;align-items:center;gap:6px;padding:9px 12px}
+.seg{display:inline-flex;border:1px solid var(--wline);border-radius:8px;overflow:hidden}
+.seg span{padding:4px 10px;font-size:12px;color:var(--wmut)}
+.seg span.on{background:rgba(229,139,108,.18);color:var(--wfg)}
+.tools .grow{flex:1}
+.tools small{color:var(--wmut);font-size:12px}
+.fig{position:relative;height:330px;margin:0 8px 8px;touch-action:none}
+.fig>svg{position:absolute;inset:0;width:100%;height:100%}
+.readout{padding:9px 12px 12px;border-top:1px solid var(--wline);color:var(--wmut);font-size:12.5px;min-height:42px}
+.readout b{color:var(--wfg);font-weight:600}
+svg text{font-family:Geist,system-ui,sans-serif}
+.tk{cursor:grab}
+.tk:focus{outline:none}
+.tk:focus circle{stroke:#fff;stroke-width:2}
+/* options */
+.opts{display:grid;gap:10px}
+.opt{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;text-align:left;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:inherit;font:inherit;cursor:pointer;min-height:44px}
+.opt:hover{border-color:color-mix(in srgb,var(--acc) 50%,var(--line))}
+.opt:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.opt[aria-pressed=true]{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 9%,var(--bg))}
+.opt .k{grid-row:span 2;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:700;background:var(--soft);font-size:14px}
+.opt[aria-pressed=true] .k{background:var(--acc);color:#fff}
+.opt p{grid-column:2;margin:0;color:var(--mut);font-size:15px}
+.tag{display:inline-block;font-size:13px;font-weight:600;padding:1px 8px;border-radius:99px;background:color-mix(in srgb,var(--ok) 18%,transparent);color:light-dark(#1f7a50,#7fdcae);margin-left:6px;vertical-align:1px}
+.hint{font-size:14px;color:var(--mut);margin-top:4px}
+/* table */
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--mut);font-size:14px}
+td:first-child{font-weight:600;white-space:nowrap}
+.yes{color:light-dark(#1f7a50,#7fdcae)}.mid{color:light-dark(#9a6a00,#e9b44c)}.no{color:var(--p1)}
+/* route */
+.soft{background:var(--soft)}
+.route{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:0;margin-top:22px;position:relative}
+.stop{position:relative;padding:34px 18px 4px 0}
+.stop::before{content:"";position:absolute;left:0;right:0;top:11px;height:4px;background:var(--line)}
+.stop.done::before{background:var(--ok)}
+.stop.now::before{background:linear-gradient(90deg,var(--ok),var(--acc))}
+.stop i{position:absolute;left:0;top:3px;width:20px;height:20px;border-radius:50%;background:var(--bg);border:4px solid var(--line)}
+.stop.done i{border-color:var(--ok);background:var(--ok)}
+.stop.now i{border-color:var(--acc);box-shadow:0 0 0 6px color-mix(in srgb,var(--acc) 22%,transparent)}
+.stop.next i{border-color:var(--acc)}
+.stop .when{font-size:13px;color:var(--mut);font-weight:500}
+.stop ul{margin:6px 0 0;padding-left:18px;font-size:15px;color:var(--mut)}
+.stop li{margin:2px 0}
+@media(max-width:640px){.route{grid-template-columns:minmax(0,1fr)}.stop{padding:0 0 18px 34px}.stop::before{left:8px;right:auto;top:0;bottom:0;width:4px;height:auto}.stop i{top:2px}}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:clamp(20px,3vw,40px)}
+.card{border:1px solid var(--line);border-radius:12px;padding:18px;background:var(--bg)}
+pre{background:var(--wbg);color:var(--wfg);border-radius:10px;padding:12px 14px;font-size:14px;margin:8px 0 0;line-height:1.5}
+.check{list-style:none;padding:0;margin:8px 0 0}
+.check li{padding:7px 0 7px 30px;position:relative;border-bottom:1px solid var(--line);font-size:15px}
+.check li::before{content:"";position:absolute;left:2px;top:10px;width:16px;height:16px;border-radius:5px;border:2px solid var(--line)}
+.check li.ok::before{background:var(--ok);border-color:var(--ok)}
+.set{background:var(--wbg);color:var(--wfg);border-radius:12px;padding:4px 0;font-size:13px;margin-top:10px}
+.set div{display:flex;align-items:center;gap:12px;padding:8px 14px;border-bottom:1px solid var(--wline);color:var(--wmut)}
+.set div:last-child{border:0}
+.set label{display:inline-flex;gap:6px;align-items:center;color:var(--wfg)}
+.set input{accent-color:var(--acc)}
+.note{font-size:13px;color:var(--mut);margin-top:10px}
+@media (prefers-reduced-motion:reduce){.tk{transition:none!important}}
+</style>
+</head>
+<body>
+<section class="band">
+<div class="wrap">
+  <h1>Ship 0.1.0 now, then add a priority matrix to the Tasks tab</h1>
+  <p class="lede">Ally is ready for npm: tests and the smoke test pass, and Jira tickets and Projects are now switched on in Settings. <b>Next, I propose a Matrix view (option A)</b> that places every ticket and todo by due date and priority, from data Ally already has. It costs no Claude tokens, and dragging a dot changes the task.</p>
+
+  <div class="hero">
+    <div class="widget" aria-label="Mock-up of Ally's Tasks tab in Matrix view">
+      <div class="whead"><span class="dot"></span><span class="wt">ALLY</span><span class="pills"><span>5h 42%</span><span>☐ <b id="openN">9</b></span></span></div>
+      <div class="tabs"><span class="tab">Usage</span><span class="tab">Sessions</span><span class="tab on">Tasks</span><span class="tab">Projects</span></div>
+      <div class="tools"><span class="seg"><span>List</span><span class="on">Matrix</span></span><span class="grow"></span><small id="optName">Due × priority</small></div>
+      <div class="fig" id="figBox"><svg id="fig" role="img" aria-label="Tasks placed on a matrix"></svg></div>
+      <div class="readout" id="readout">Drag a dot to another square. Arrow keys work too.</div>
+    </div>
+
+    <div>
+      <div class="opts" id="opts">
+        <button class="opt" data-o="a" aria-pressed="true"><span class="k">A</span><h3>Urgent × important <span class="tag">recommended</span></h3><p>Four squares: Do now, Plan, Quick win, Later. Left to right is the due date, top to bottom is priority. Drag across to set a due date, up or down to set P1, P2, P3.</p></button>
+        <button class="opt" data-o="b" aria-pressed="false"><span class="k">B</span><h3>Priority lanes on a timeline</h3><p>Three lanes, P1 to P3, with tasks on a 14-day line. Good to see the next two weeks; less clear about what to do first.</p></button>
+        <button class="opt" data-o="c" aria-pressed="false"><span class="k">C</span><h3>Impact × effort</h3><p>The classic consulting grid. Needs a new effort field on every task, which Jira does not have by default: more typing for you.</p></button>
+      </div>
+      <p class="hint">Click an option to see it in the widget. Sample tasks; ACME is a placeholder project.</p>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="band">
+<div class="wrap">
+  <h2>Option A fits Ally's rules best</h2>
+  <p>Ally's two rules are few Claude tokens and nothing refreshed in the background. A and B use only the due date and priority the Tasks tab already loads.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Option</th><th>Data needed</th><th>Claude tokens</th><th>Fits a 300px widget</th><th>Tells you what to do first</th></tr></thead>
+    <tbody>
+      <tr><td>A · Urgent × important</td><td class="yes">Due date, priority: already loaded</td><td class="yes">None</td><td class="yes">Yes, 2×2</td><td class="yes">Yes: the Do now square</td></tr>
+      <tr><td>B · Lanes on a timeline</td><td class="yes">Due date, priority</td><td class="yes">None</td><td class="mid">Tight: 14 days in 300px</td><td class="mid">Partly</td></tr>
+      <tr><td>C · Impact × effort</td><td class="no">New effort field on every task</td><td class="mid">None, or some to guess effort</td><td class="yes">Yes, 2×2</td><td class="mid">Only once effort is filled</td></tr>
+    </tbody>
+  </table></div>
+  <div class="cols" style="margin-top:22px">
+    <div><h3>How A places a task</h3><p>Urgent means due within 2 days or overdue. Important means P1 or P2; Jira's Highest and High become P1, Medium P2, the rest P3, as the list does today. A task with no due date sits at the far right.</p></div>
+    <div><h3>What a drag does</h3><p>Into Do now: priority P1, due today. Into Later: P3, due date kept. For a Jira ticket Ally writes the priority and due date straight to Jira's REST API, as Move to does now; read-only sign-ins get a notice instead.</p></div>
+  </div>
+</div>
+</section>
+
+<section class="band soft">
+<div class="wrap">
+  <h2>What to do next, in order</h2>
+  <p>Phases 0 to 5 are built. Times are estimates.</p>
+  <div class="route" id="route"></div>
+</div>
+</section>
+
+<section class="band">
+<div class="wrap cols">
+  <div class="card">
+    <h3>Publish to npm: your three commands</h3>
+    <p class="hint">npm needs your login, so you run these. Type them after a <b>!</b> in Claude Code.</p>
+    <pre>npm login
+npm publish
+npx @sira-ndiaye/ally</pre>
+    <ul class="check">
+      <li class="ok">90 unit tests and the smoke test pass</li>
+      <li class="ok">Package checked: 34 files, 289 kB unpacked</li>
+      <li class="ok">Name @sira-ndiaye/ally is free, access public</li>
+      <li>GitHub repository Sira-Ndiaye/ally pushed, so the npm page's links work</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Optional parts, built today</h3>
+    <p class="hint">Settings now has a Show row. Unchecked parts leave the main display: no Projects tab, no Jira tickets, chips or menu items. Personal tasks always stay.</p>
+    <div class="set" aria-label="Mock-up of the Settings rows">
+      <div>Opacity <span style="flex:1;height:3px;background:var(--acc);border-radius:2px"></span> 80%</div>
+      <div>Show <label><input type="checkbox" checked disabled> Jira tickets</label><label><input type="checkbox" disabled> Projects</label></div>
+      <div>Jira <span style="flex:1">acme.atlassian.net · signed in</span><span style="color:var(--acc)">Change</span></div>
+    </div>
+    <p class="note">A new install starts with both off. Your install keeps what it uses: Jira on because it is connected, Projects on if you have any.</p>
+  </div>
+</div>
+</section>
+
+<script>
+{
+const tasks=[
+  {k:'ACME-142',t:'Fix login timeout',p:1,d:0},
+  {k:'ACME-118',t:'Review payment PR',p:2,d:1},
+  {k:'',t:'Send invoice',p:1,d:-1},
+  {k:'ACME-131',t:'Migrate CI to Node 22',p:1,d:6},
+  {k:'ACME-127',t:'Write release notes',p:2,d:9},
+  {k:'',t:'Book dentist',p:3,d:1},
+  {k:'ACME-109',t:'Rename settings keys',p:3,d:2},
+  {k:'',t:'Read Electron 44 notes',p:3,d:13},
+  {k:'ACME-150',t:'Board: dark mode',p:2,d:null},
+  {k:'',t:'Tidy downloads',p:3,d:null}
+];
+const effort=[2,1,1,3,2,1,1,2,3,1];
+const col={1:'#e5604f',2:'#e9b44c',3:'#6aa6e8'};
+let opt='a',drag=null,sel=-1;
+const s=document.getElementById('fig'),box=document.getElementById('figBox'),out=document.getElementById('readout');
+const esc=(x)=>String(x).replace(/[&<>"']/g,(c)=>'&#'+c.charCodeAt(0)+';');
+const label=(t)=>t.k||t.t;
+const dueTxt=(d)=>d==null?'no due date':d<0?'overdue':d===0?'due today':d===1?'due tomorrow':'due in '+d+' days';
+const jit=(i)=>((i*7919)%13)/13-.5;
+function geom(){const W=s.clientWidth,H=s.clientHeight,L=opt==='b'?30:8,T=8,R=8,B=26;return{W,H,L,T,R,B,w:W-L-R,h:H-T-B}}
+// positions as 0..1 fractions
+function place(t,i){
+  if(opt==='a'){const ux=t.d==null?.9:t.d<=2?.06+Math.max(-1,t.d)/2*.36+.06:.56+Math.min(t.d,14)/14*.3;return{x:ux+jit(i)*.06,y:(t.p===1?.18:t.p===2?.38:.75)+jit(i+3)*.12}}
+  if(opt==='b'){const x=t.d==null?.97:(Math.max(-1,Math.min(t.d,14))+1)/15*.9+.02;return{x,y:(t.p-1)/3+.17+jit(i)*.1}}
+  return{x:(effort[i]-1)/2*.7+.15+jit(i)*.12,y:(t.p===1?.2:t.p===2?.45:.75)+jit(i+5)*.12}
+}
+function grid(g){
+  const{L,T,w,h,H}=g;let o='';
+  const line=(x1,y1,x2,y2)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="rgba(255,255,255,.14)"/>`;
+  const txt=(x,y,t,a='start',c='#9aa3b2',sz=12)=>`<text x="${x}" y="${y}" fill="${c}" font-size="${sz}" text-anchor="${a}">${t}</text>`;
+  if(opt==='a'||opt==='c'){
+    const quad=opt==='a'?[['Do now','rgba(229,96,79,.13)'],['Plan','rgba(233,180,76,.08)'],['Quick win','rgba(106,166,232,.08)'],['Later','rgba(255,255,255,.03)']]
+      :[['Quick wins','rgba(79,191,138,.12)'],['Big bets','rgba(233,180,76,.08)'],['Fill-ins','rgba(106,166,232,.08)'],['Skip','rgba(255,255,255,.03)']];
+    const mx=L+w/2,my=T+h*(opt==='a'?.5:.58);
+    const rects=[[L,T,w/2,my-T],[mx,T,w/2,my-T],[L,my,w/2,T+h-my],[mx,my,w/2,T+h-my]];
+    rects.forEach((r,i)=>{o+=`<rect x="${r[0]+2}" y="${r[1]+2}" width="${r[2]-4}" height="${r[3]-4}" rx="9" fill="${quad[i][1]}"/>`+txt(r[0]+12,r[1]+20,quad[i][0],'start',i===0?'#f0a689':'#c3c9d4',12.5)});
+    o+=txt(L+4,H-8,opt==='a'?'← due soon':'← little effort')+txt(L+w-4,H-8,opt==='a'?'later or no date →':'more effort →','end');
+  }else{
+    for(let p=0;p<3;p++){const y=T+h*p/3;o+=`<rect x="${L}" y="${y+2}" width="${w}" height="${h/3-4}" rx="8" fill="${['rgba(229,96,79,.1)','rgba(233,180,76,.07)','rgba(106,166,232,.07)'][p]}"/>`+txt(L-8,y+h/6+4,'P'+(p+1),'end',col[p+1],12.5)}
+    const tx=(d)=>L+((d+1)/15*.9+.02)*w;const ticks=g.W<360?[0,7,14]:[0,3,7,14];
+    ticks.forEach((d)=>{o+=line(tx(d),T,tx(d),T+h)+txt(tx(d),H-8,d===0?'today':d+'d','middle')});
+  }
+  return o;
+}
+function draw(){
+  const g=geom();if(!g.W)return;let o=grid(g);
+  tasks.forEach((t,i)=>{
+    const q=t._pos||place(t,i),x=g.L+q.x*g.w,y=g.T+q.y*g.h,on=i===sel;
+    const tx=x>g.L+g.w*.62?x-11:x+11,an=x>g.L+g.w*.62?'end':'start';
+    o+=`<g class="tk" tabindex="0" data-i="${i}" role="button" aria-label="${esc(label(t)+', P'+t.p+', '+dueTxt(t.d))}">`+
+      `<circle cx="${x}" cy="${y}" r="${on?8:6.5}" fill="${col[t.p]}" ${t.k?'':'fill-opacity=".9" stroke="#14161c" stroke-width="2"'}/>`+
+      `<text x="${tx}" y="${y+4}" font-size="12" fill="#dfe3ea" text-anchor="${an}" style="paint-order:stroke;stroke:#14161c;stroke-width:4px">${esc(g.W<340&&!on?(t.k||t.t.split(' ')[0]):label(t))}</text></g>`;
+  });
+  s.innerHTML=o;
+}
+// option A: a fraction position back to a priority and due date
+function fromPos(t,q){
+  if(opt==='a'){t.p=q.y<.28?1:q.y<.5?2:3;if(q.x<.5){t.d=q.x<.2?0:q.x<.35?1:2}else if(t.d==null||t.d<=2){t.d=7}}
+  else if(opt==='b'){t.p=q.y<1/3?1:q.y<2/3?2:3;t.d=q.x>.93?null:Math.max(0,Math.round((q.x-.02)/.9*15-1))}
+  else{t.p=q.y<.4?1:q.y<.62?2:3;effort[tasks.indexOf(t)]=q.x<.5?1:3}
+}
+function say(t){
+  const what=t.k?'writes to Jira':'saves the todo';
+  out.innerHTML=`<b>${esc(label(t))}</b> → P${t.p}, ${esc(dueTxt(t.d))}${opt==='c'?', effort '+(effort[tasks.indexOf(t)]<2?'small':'large'):''}. Ally ${what}, no Claude.`;
+}
+s.addEventListener('pointerdown',(e)=>{const g=e.target.closest('.tk');if(!g)return;drag=+g.dataset.i;sel=drag;s.setPointerCapture(e.pointerId);draw()});
+s.addEventListener('pointermove',(e)=>{if(drag==null)return;const g=geom(),r=s.getBoundingClientRect();
+  const q={x:Math.min(.98,Math.max(.02,(e.clientX-r.left-g.L)/g.w)),y:Math.min(.97,Math.max(.03,(e.clientY-r.top-g.T)/g.h))};
+  tasks[drag]._pos=q;fromPos(tasks[drag],q);say(tasks[drag]);draw()});
+const end=()=>{if(drag==null)return;delete tasks[drag]._pos;drag=null;draw()};
+s.addEventListener('pointerup',end);s.addEventListener('pointercancel',end);
+s.addEventListener('keydown',(e)=>{const g=e.target.closest('.tk');if(!g)return;const i=+g.dataset.i,t=tasks[i];sel=i;
+  const q=place(t,i),step={ArrowLeft:[-.25,0],ArrowRight:[.25,0],ArrowUp:[0,-.22],ArrowDown:[0,.22]}[e.key];if(!step)return;e.preventDefault();
+  fromPos(t,{x:Math.min(.98,Math.max(.02,q.x+step[0])),y:Math.min(.97,Math.max(.03,q.y+step[1]))});say(t);draw();s.querySelector(`[data-i="${i}"]`)?.focus()});
+const names={a:'Due × priority',b:'Priority lanes',c:'Impact × effort'};
+document.getElementById('opts').addEventListener('click',(e)=>{const b=e.target.closest('.opt');if(!b)return;opt=b.dataset.o;
+  document.querySelectorAll('.opt').forEach((x)=>x.setAttribute('aria-pressed',x===b));document.getElementById('optName').textContent=names[opt];sel=-1;
+  out.textContent='Drag a dot to another square. Arrow keys work too.';draw()});
+const ro=new ResizeObserver(draw);ro.observe(box);
+document.getElementById('openN').textContent=tasks.length-1;
+
+const route=[
+  {c:'done',t:'Phases 0 to 5',w:'Built',l:['Rename to Ally','Tasks, actions, Projects','Board on claude.ai']},
+  {c:'done',t:'Optional parts',w:'Built today',l:['Show row in Settings','Jira and Projects off by default for new installs']},
+  {c:'now',t:'Release 0.1.0',w:'This week, about 1 hour',l:['Push to GitHub, CI green on 3 systems','You run npm login and npm publish','Try npx @sira-ndiaye/ally on a clean machine']},
+  {c:'next',t:'Phase 6: Matrix',w:'About 3 days',l:['List | Matrix switch in Tasks','Drag sets priority and due date','Jira written by REST, no tokens']},
+  {c:'next',t:'Phase 7: Focus',w:'About 2 days',l:['Compact bar shows the top Do now task','A #matrix view on the board','First-run screen asks which parts to show']}
+];
+document.getElementById('route').innerHTML=route.map((r)=>`<div class="stop ${r.c}"><i></i><span class="when">${esc(r.w)}</span><h3>${esc(r.t)}</h3><ul>${r.l.map((x)=>`<li>${esc(x)}</li>`).join('')}</ul></div>`).join('');
+}
+</script>
+</body>
+</html>
