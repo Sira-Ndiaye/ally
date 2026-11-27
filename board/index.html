@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ally Projects</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="board.css">
+</head>
+<body>
+<main id="app">
+  <header class="top">
+    <div>
+      <h1 id="title">Projects</h1>
+      <p class="sub" id="sub">Loading your projects…</p>
+    </div>
+    <button class="btn" id="refresh" type="button" hidden>Refresh from Jira</button>
+  </header>
+  <section class="paste" id="paste" hidden>
+    <label for="pastebox">Ally copied your projects. Click the box and press <kbd id="pastekey">⌘V</kbd>.</label>
+    <textarea id="pastebox" rows="2" placeholder="Paste here"></textarea>
+    <p class="msg" id="pastemsg" role="status"></p>
+  </section>
+  <p class="msg" id="msg" role="status"></p>
+  <div id="view"></div>
+</main>
+<script src="projects.js"></script>
+<script src="board.js"></script>
+</body>
+</html>

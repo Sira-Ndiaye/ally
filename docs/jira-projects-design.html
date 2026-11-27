@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ally Jira and Projects</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: a design review read top to bottom. Page in light/dark tokens; the widget
+   and artifact mockups keep the widget's own dark world so they look like the real thing. */
+:root {
+  --bg: #f3f4f6;
+  --surface: #ffffff;
+  --ink: #1a1d23;
+  --muted: #5d6573;
+  --line: #dde0e6;
+  --accent: #b9533c;
+  --ok: #2f8f63;
+  --warn: #a87313;
+  --crit: #c2412f;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+  /* widget world, shared with src/styles.css */
+  --w-bg: #16181e;
+  --w-panel: #1d2028;
+  --w-fg: #eef1f6;
+  --w-muted: #9aa3b2;
+  --w-line: rgba(255, 255, 255, .09);
+  --w-accent: #e58b6c;
+  --w-ok: #4fbf8a;
+  --w-crit: #e5604f;
+  --w-p2: #e9b44c;
+  --w-p3: #6aa6e8;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101217; --surface: #171a21; --ink: #e8ebf1; --muted: #9aa2b1; --line: #2a2f39;
+    --accent: #e58b6c; --ok: #4fbf8a; --warn: #e0ad4a; --crit: #ec6a58; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101217; --surface: #171a21; --ink: #e8ebf1; --muted: #9aa2b1; --line: #2a2f39;
+  --accent: #e58b6c; --ok: #4fbf8a; --warn: #e0ad4a; --crit: #ec6a58; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.6 var(--body); }
+main { max-width: 1080px; margin: 0 auto; padding: 40px 20px 80px; display: grid; gap: 56px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: 40px; letter-spacing: -.01em; }
+h2 { font-size: 26px; }
+h3 { font-size: 18px; }
+p { margin: 0; max-width: 68ch; }
+section { display: grid; gap: 18px; }
+.kicker { font: 500 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.lede { font-size: 18px; color: var(--muted); max-width: 64ch; }
+.meta { font: 12px var(--mono); color: var(--muted); }
+code { font: 13px var(--mono); background: color-mix(in srgb, var(--line) 55%, transparent); padding: 1px 5px; border-radius: 4px; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.verdict { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 10px; padding: 20px 22px; display: grid; gap: 12px; }
+.verdict ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; max-width: 76ch; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 28px; align-items: start; }
+.note { display: grid; gap: 8px; }
+.note p, .note li { color: var(--muted); font-size: 14px; }
+.note ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.tag { font: 600 11px var(--mono); padding: 1px 7px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.tag.zero { color: var(--ok); }
+.tag.small { color: var(--warn); }
+.tag.real { color: var(--crit); }
+
+/* ---------- widget mockups ---------- */
+.stage { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
+.mock { display: grid; gap: 10px; justify-items: start; }
+.mock figcaption { font-size: 13px; color: var(--muted); max-width: 320px; }
+.w {
+  width: 320px; border-radius: 12px; overflow: hidden; position: relative;
+  background: var(--w-bg); color: var(--w-fg); border: 1px solid rgba(255, 255, 255, .12);
+  font: 12.5px/1.45 var(--body); box-shadow: 0 18px 40px rgba(10, 12, 18, .28);
+}
+.w .head { display: flex; align-items: center; gap: 8px; padding: 9px 11px; border-bottom: 1px solid var(--w-line); }
+.w .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--w-accent); }
+.w .ttl { font-weight: 600; font-size: 12px; letter-spacing: .06em; flex: 1; }
+.w .ics { display: flex; gap: 10px; color: var(--w-muted); font: 12px var(--mono); }
+.w .tabs { display: flex; padding: 6px 8px 0; }
+.w .tab { flex: 1; text-align: center; color: var(--w-muted); font-weight: 500; font-size: 12px; padding: 6px 2px; border-bottom: 2px solid transparent; white-space: nowrap; }
+.w .tab.on { color: var(--w-fg); border-bottom-color: var(--w-accent); }
+.w .n { font: 10px var(--mono); background: rgba(255, 255, 255, .1); border-radius: 8px; padding: 0 5px; margin-left: 3px; }
+.w .body { padding: 10px 11px 12px; display: grid; gap: 8px; min-height: 330px; align-content: start; }
+.w .chips { display: flex; gap: 5px; flex-wrap: wrap; }
+.w .chip { font: 600 10px var(--mono); border: 1px solid var(--w-line); color: var(--w-muted); border-radius: 999px; padding: 2px 8px; }
+.w .chip.on { color: var(--w-fg); border-color: var(--w-accent); background: rgba(229, 139, 108, .14); }
+.w .chip b { font-weight: 600; color: var(--w-fg); margin-left: 3px; }
+.w .sum { display: flex; justify-content: space-between; font: 10px var(--mono); color: var(--w-muted); letter-spacing: .06em; text-transform: uppercase; }
+.w ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.tk { display: grid; grid-template-columns: auto 1fr auto; gap: 2px 8px; align-items: center; padding: 6px 7px; border-radius: 7px; border: 1px solid transparent; }
+.tk.sel { background: rgba(255, 255, 255, .06); border-color: rgba(229, 139, 108, .5); }
+.tk .key { font: 600 10.5px var(--mono); color: var(--w-p3); }
+.tk .tt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tk .due { font: 10.5px var(--mono); color: var(--w-muted); }
+.tk .due.late { color: var(--w-crit); }
+.tk .sub { grid-column: 2 / 4; font: 10.5px var(--mono); color: var(--w-muted); display: flex; gap: 8px; }
+.pri { font: 600 9.5px var(--mono); padding: 0 4px; border-radius: 3px; color: #14161b; }
+.pri.hi { background: var(--w-crit); } .pri.md { background: var(--w-p2); } .pri.lo { background: var(--w-p3); }
+.blk { color: var(--w-crit); }
+.who { font: 600 9.5px var(--mono); color: #14161b; background: var(--w-p3); border-radius: 999px; padding: 0 5px; }
+.kind { font: 600 9.5px var(--mono); color: var(--w-muted); border: 1px solid var(--w-line); border-radius: 999px; padding: 0 6px; }
+.kind.live { color: var(--w-ok); border-color: rgba(79, 191, 138, .45); }
+.sel-skill { display: flex; justify-content: space-between; align-items: center; }
+.sel-skill .own { font: 600 9.5px var(--mono); color: var(--w-accent); }
+.toast { display: grid; gap: 2px; background: #252935; border: 1px solid rgba(229, 139, 108, .45); border-radius: 8px; padding: 7px 9px; animation: rise .4s cubic-bezier(.2, .7, .2, 1) both; }
+.toast b { font-family: var(--mono); font-size: 11.5px; }
+.toast .own { text-decoration: underline; cursor: pointer; }
+.check { display: flex; gap: 7px; align-items: center; font-size: 12px; }
+.check i { width: 13px; height: 13px; border-radius: 3px; background: var(--w-accent); display: inline-grid; place-items: center; font: 700 9px var(--mono); color: #1a1310; font-style: normal; }
+
+.menu {
+  position: absolute; left: 150px; top: 178px; width: 210px; z-index: 2;
+  background: #252935; border: 1px solid rgba(255, 255, 255, .14); border-radius: 9px; padding: 5px;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, .45); font-size: 12px;
+}
+.menu .mi { display: flex; justify-content: space-between; gap: 10px; padding: 5px 8px; border-radius: 6px; color: var(--w-fg); }
+.menu .mi.hl { background: rgba(229, 139, 108, .2); }
+.menu .mi span:last-child { color: var(--w-muted); font: 10.5px var(--mono); }
+.menu .sep { height: 1px; background: var(--w-line); margin: 4px 2px; }
+.menu .lbl { font: 600 9.5px var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--w-muted); padding: 4px 8px 2px; }
+.menu .claude { color: var(--w-accent); font-weight: 600; }
+
+.pj { display: grid; gap: 6px; padding: 9px 9px 10px; border-radius: 8px; background: var(--w-panel); border: 1px solid var(--w-line); }
+.pj .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.pj .nm { font-weight: 600; }
+.pj .st { font: 600 9.5px var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+.st.ok { color: var(--w-ok); } .st.warn { color: var(--w-p2); } .st.bad { color: var(--w-crit); }
+.bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: rgba(255, 255, 255, .07); }
+.bar i { display: block; height: 100%; transform-origin: left; animation: grow .9s cubic-bezier(.2, .7, .2, 1) both; }
+.bar .d { background: var(--w-ok); } .bar .p { background: var(--w-accent); animation-delay: .15s; } .bar .b { background: var(--w-crit); animation-delay: .3s; }
+.pj .ft { display: flex; justify-content: space-between; font: 10.5px var(--mono); color: var(--w-muted); }
+.newp { border: 1px dashed rgba(255, 255, 255, .22); color: var(--w-muted); border-radius: 8px; padding: 8px; text-align: center; font-size: 12px; }
+@keyframes grow { from { transform: scaleX(0); } }
+
+.sheet { display: grid; gap: 9px; }
+.sheet label { font: 600 9.5px var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--w-muted); }
+.sheet .field { background: rgba(255, 255, 255, .06); border: 1px solid var(--w-line); border-radius: 6px; padding: 6px 8px; font: 11.5px var(--mono); }
+.sheet pre { margin: 0; white-space: pre-wrap; font: 10.5px/1.5 var(--mono); color: var(--w-muted); background: rgba(255, 255, 255, .04); border-radius: 6px; padding: 7px 8px; max-height: 150px; overflow: hidden; }
+.sheet .row { display: flex; gap: 6px; justify-content: flex-end; }
+.btn { font: 600 11.5px var(--body); border-radius: 6px; padding: 5px 11px; border: 1px solid var(--w-line); color: var(--w-fg); }
+.btn.go { background: var(--w-accent); border-color: var(--w-accent); color: #1a1310; }
+.sheet .hint { font: 10.5px var(--mono); color: var(--w-muted); }
+
+/* ---------- artifact mockups ---------- */
+.browser { border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: var(--w-bg); color: var(--w-fg); box-shadow: 0 18px 40px rgba(10, 12, 18, .22); }
+.browser .bar-top { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #0f1116; border-bottom: 1px solid var(--w-line); font: 11.5px var(--mono); color: var(--w-muted); }
+.browser .bar-top i { width: 9px; height: 9px; border-radius: 50%; background: #3a3f4b; display: inline-block; }
+.browser .url { margin-left: 10px; background: rgba(255, 255, 255, .06); border-radius: 6px; padding: 2px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.art { padding: 18px; display: grid; gap: 14px; font-size: 13px; }
+.art h3 { font-size: 20px; color: var(--w-fg); }
+.art .sub { font: 11px var(--mono); color: var(--w-muted); }
+.board { display: grid; grid-template-columns: repeat(4, minmax(170px, 1fr)); gap: 10px; overflow-x: auto; }
+.col { background: rgba(255, 255, 255, .03); border: 1px solid var(--w-line); border-radius: 9px; padding: 9px; display: grid; gap: 8px; align-content: start; }
+.col h4 { margin: 0; font: 600 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--w-muted); display: flex; justify-content: space-between; }
+.card { background: var(--w-panel); border: 1px solid var(--w-line); border-radius: 8px; padding: 9px; display: grid; gap: 6px; animation: rise .55s cubic-bezier(.2, .7, .2, 1) both; }
+.card:nth-child(3) { animation-delay: .08s; } .card:nth-child(4) { animation-delay: .16s; }
+.card .nm { font-weight: 600; }
+.card .ft { display: flex; justify-content: space-between; font: 10.5px var(--mono); color: var(--w-muted); }
+.card.bad { border-color: rgba(229, 96, 79, .55); }
+@keyframes rise { from { transform: translateY(10px); opacity: .001; } }
+
+.detail { display: grid; grid-template-columns: 1.1fr 1fr; gap: 14px; }
+.panel { background: var(--w-panel); border: 1px solid var(--w-line); border-radius: 9px; padding: 12px; display: grid; gap: 8px; align-content: start; animation: rise .55s cubic-bezier(.2, .7, .2, 1) both; }
+.panel:nth-child(2) { animation-delay: .08s; } .panel:nth-child(3) { animation-delay: .16s; } .panel:nth-child(4) { animation-delay: .24s; }
+.panel h4 { margin: 0; font: 600 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--w-muted); }
+.panel ul { margin: 0; padding-left: 16px; display: grid; gap: 3px; }
+.panel.done h4 { color: var(--w-ok); } .panel.block h4 { color: var(--w-crit); } .panel.next h4 { color: var(--w-accent); }
+.ring { display: flex; gap: 14px; align-items: center; }
+.ring svg { width: 74px; height: 74px; flex: none; }
+.ring .arc { stroke-dasharray: 100 100; animation: draw 1.1s cubic-bezier(.2, .7, .2, 1) both; }
+@keyframes draw { from { stroke-dashoffset: 100; } }
+.ai { font: 10px var(--mono); color: var(--w-accent); border: 1px solid rgba(229, 139, 108, .5); border-radius: 999px; padding: 0 6px; justify-self: start; }
+
+/* ---------- diagram, table ---------- */
+figure { margin: 0; display: grid; gap: 10px; }
+figure > svg { width: 100%; height: auto; max-width: 980px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+figcaption { font-size: 14px; color: var(--muted); max-width: 76ch; }
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 760px; font-size: 14px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 600 11px var(--mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+tr:last-child td { border-bottom: 0; }
+td:first-child { font-weight: 600; }
+.steps { display: grid; gap: 12px; counter-reset: step; }
+.step { display: grid; grid-template-columns: 34px 1fr; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.step::before { counter-increment: step; content: counter(step, decimal-leading-zero); font: 600 13px var(--mono); color: var(--accent); }
+.step div { display: grid; gap: 4px; }
+.step p { color: var(--muted); font-size: 14px; }
+.risks { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.risk { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 6px; }
+.risk p { font-size: 14px; color: var(--muted); }
+.qs { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 80ch; }
+.sources { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; }
+
+@media (max-width: 720px) {
+  h1 { font-size: 30px; }
+  .detail { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; }
+}
+</style>
+</head>
+<body>
+<main>
+
+<header style="display:grid;gap:14px">
+  <span class="kicker">Ally (formerly Claude Meter) · design study · 17 Nov 2026</span>
+  <h1>Jira tickets and project pages for Ally</h1>
+  <p class="lede">Replace the Todo tab with your Jira tickets, hand a ticket to Claude for planning in one click, and add a Projects tab that opens animated project pages on claude.ai. This page shows the design and how to build it so it stays fast and uses as few Claude tokens as possible.</p>
+  <span class="meta">Status: proposal, revision 5 (Tasks tab joining todos and Jira, refresh on demand, phases). Nothing built yet. Ticket, people and project data on this page are examples.</span>
+</header>
+
+<section aria-labelledby="verdict">
+  <div class="verdict">
+    <h2 id="verdict" style="font-size:22px">Recommendation</h2>
+    <ul>
+      <li><strong>A Tasks tab joins your todos and Jira tickets.</strong> It shows your tickets, the ones you follow, the labels you add as filters, and your todos under Personal. Following a ticket uses Jira's own Watch, so it stays the same in Jira and in the widget. A ticket assigned to someone else shows their initials.</li>
+      <li><strong>"Plan with Claude" starts at once, with no confirmation.</strong> The widget works out your ticket skill and the repository by itself, opens the terminal, and shows a short notice with a Change link in case it guessed wrong. Your skill runs as <code>/your-skill CM-42</code>; with no skill, the built-in planning prompt runs instead. Either way the widget passes the ticket, so Claude does not spend turns fetching it.</li>
+      <li><strong>A project does not need an epic.</strong> Its progress comes from a linked epic or label when it has one, read live from Jira; otherwise from its own checklist, where the current todos move. Right-click a project to create an epic for it, and follow other people's epics or labels as projects.</li>
+      <li><strong>One artifact for all projects, with one view per project,</strong> reading Jira live through your claude.ai Atlassian connector at no Claude token cost. Only checklist projects have to be sent to the page, when you press Update board: Ally copies them, you paste them into the board, no Claude involved. Nothing refreshes in the background.</li>
+      <li><strong>The app becomes Ally,</strong> with the command <code>ally</code>, described as working with Claude Code. <a href="#name">What the rename touches.</a></li>
+      <li><strong>Start with a two-day spike</strong> to confirm what this design depends on but that I could not test from here (listed under <a href="#risks">Unknowns</a>).</li>
+    </ul>
+  </div>
+</section>
+
+<section aria-labelledby="widget">
+  <span class="kicker">1 · In the widget</span>
+  <h2 id="widget">Tasks tab, ticket menu and Projects tab</h2>
+  <p>The tabs become <strong>Usage · Sessions · Tasks · Projects</strong>. <strong>Tasks</strong> joins your todos and your Jira tickets in one list with one look: a todo is a row without a Jira key. The Today/Week/All chips become statuses, each with its count; a todo is To Do, In Progress or Done and falls under the matching chip. A second row picks what you see: <strong>Mine</strong>, <strong>Following</strong>, any labels you add, and <strong>Personal</strong> for your todos. The add box still creates a todo. Right-clicking a row opens its menu; a todo's menu adds <strong>Send to Jira</strong>, which turns it into a ticket, and <strong>Add to project</strong>.</p>
+  <div class="stage">
+    <figure class="mock">
+      <div class="w" aria-label="Mockup: Jira tab with scope filters and a ticket's right-click menu open">
+        <div class="head"><span class="dot"></span><span class="ttl">ALLY</span><span class="ics">⚙ ⌖ – ×</span></div>
+        <div class="tabs"><span class="tab">Usage</span><span class="tab">Sessions<span class="n">2</span></span><span class="tab on">Tasks<span class="n">12</span></span><span class="tab">Projects</span></div>
+        <div class="body">
+          <div class="chips"><span class="chip">To Do<b>5</b></span><span class="chip on">In Progress<b>4</b></span><span class="chip">In Review<b>3</b></span><span class="chip">Done<b>·</b></span></div>
+          <div class="chips"><span class="chip on">Mine<b>7</b></span><span class="chip on">Following<b>3</b></span><span class="chip on">#release-1.2<b>2</b></span><span class="chip on">Personal<b>3</b></span><span class="chip">+ label</span></div>
+          <ul>
+            <li class="tk"><span class="pri hi">P1</span><span class="tt">Show Jira tickets in the widget</span><span class="due late">2d late</span><span class="sub"><span class="key">CM-41</span><span>Claude Meter</span></span></li>
+            <li class="tk sel"><span class="pri md">P2</span><span class="tt">Move a ticket from its right-click menu</span><span class="due">Fri</span><span class="sub"><span class="key">CM-42</span><span>Claude Meter</span></span></li>
+            <li class="tk"><span class="pri md">P2</span><span class="tt">Retry the payment webhook</span><span class="due">Nov 24</span><span class="sub"><span class="key">BIL-88</span><span class="who">AK</span><span>👁 following</span></span></li>
+            <li class="tk"><span class="pri lo">P3</span><span class="tt">Release notes for 1.2</span><span class="due">Dec 1</span><span class="sub"><span class="key">MOB-12</span><span class="who">JD</span><span>#release-1.2</span></span></li>
+            <li class="tk"><span class="pri md">P2</span><span class="tt">Book the dentist</span><span class="due">today</span><span class="sub"><span>todo · Personal</span></span></li>
+          </ul>
+        </div>
+        <div class="menu" role="presentation">
+          <div class="lbl">Move to</div>
+          <div class="mi"><span>To Do</span><span></span></div>
+          <div class="mi hl"><span>In Review</span><span>→</span></div>
+          <div class="mi"><span>Done</span><span></span></div>
+          <div class="sep"></div>
+          <div class="mi claude"><span>Plan with Claude…</span><span>/jira-plan</span></div>
+          <div class="sep"></div>
+          <div class="mi"><span>Follow ticket</span><span>👁</span></div>
+          <div class="mi"><span>Follow its label…</span><span>#</span></div>
+          <div class="mi"><span>Open in Jira</span><span>↗</span></div>
+          <div class="mi"><span>Copy key</span><span>CM-42</span></div>
+        </div>
+      </div>
+      <figcaption>Tickets assigned to someone else show that person's initials (AK, JD). "Follow ticket" adds you as a watcher in Jira, so following is the same everywhere. "Move to" lists only the moves the ticket's workflow allows, fetched when the menu opens.</figcaption>
+    </figure>
+
+    <figure class="mock">
+      <div class="w" aria-label="Mockup: the widget right after Plan with Claude was clicked">
+        <div class="head"><span class="dot"></span><span class="ttl">ALLY</span><span class="ics">⚙ ⌖ – ×</span></div>
+        <div class="tabs"><span class="tab">Usage</span><span class="tab">Sessions<span class="n">3</span></span><span class="tab on">Tasks<span class="n">12</span></span><span class="tab">Projects</span></div>
+        <div class="body sheet">
+          <ul>
+            <li class="tk"><span class="pri hi">P1</span><span class="tt">Show Jira tickets in the widget</span><span class="due late">2d late</span><span class="sub"><span class="key">CM-41</span><span>Claude Meter</span></span></li>
+            <li class="tk sel"><span class="pri md">P2</span><span class="tt">Move a ticket from its right-click menu</span><span class="due">Fri</span><span class="sub"><span class="key">CM-42</span><span style="color:var(--w-accent)">● planning in terminal</span></span></li>
+          </ul>
+          <div class="toast">
+            <div class="sel-skill"><span>Planning <b>CM-42</b></span><span class="own">Change</span></div>
+            <span class="hint">with /jira-plan · in ~/…/claude-meter</span>
+          </div>
+          <label>What the terminal received</label>
+          <pre>/jira-plan CM-42
+
+Ticket, so you need not fetch it:
+Title: Move a ticket from its right-click menu
+Status: In Progress · P2 · due Fri 21 Nov
+Description: Right-click shows the allowed moves…
+Links: blocks CM-43</pre>
+        </div>
+      </div>
+      <figcaption>One click on "Plan with Claude" opens the terminal straight away. The notice says what the widget chose and fades after a few seconds. Change picks another skill or folder, reruns, and is remembered for every CM ticket. The session is named CM-42, so it shows up in the Sessions tab.</figcaption>
+    </figure>
+
+    <figure class="mock">
+      <div class="w" aria-label="Mockup: Projects tab with a project's right-click menu open">
+        <div class="head"><span class="dot"></span><span class="ttl">ALLY</span><span class="ics">⚙ ⌖ – ×</span></div>
+        <div class="tabs"><span class="tab">Usage</span><span class="tab">Sessions<span class="n">2</span></span><span class="tab">Tasks<span class="n">12</span></span><span class="tab on">Projects<span class="n">4</span></span></div>
+        <div class="body">
+          <div class="pj">
+            <div class="top"><span class="nm">Claude Meter</span><span class="st ok">On track</span></div>
+            <div class="bar"><i class="d" style="width:58%"></i><i class="p" style="width:30%"></i><i class="b" style="width:4%"></i></div>
+            <div class="ft"><span><span class="kind live">epic CM-1</span> 14/22 done</span><span>Dec 12</span></div>
+          </div>
+          <div class="pj">
+            <div class="top"><span class="nm">Release 1.2</span><span class="st warn">At risk</span></div>
+            <div class="bar"><i class="d" style="width:31%"></i><i class="p" style="width:44%"></i><i class="b" style="width:9%"></i></div>
+            <div class="ft"><span><span class="kind live">#release-1.2</span> 5/16 done</span><span>Nov 28</span></div>
+          </div>
+          <div class="pj">
+            <div class="top"><span class="nm">Home office move</span><span class="st ok">On track</span></div>
+            <div class="bar"><i class="d" style="width:60%"></i></div>
+            <div class="ft"><span><span class="kind">checklist</span> 6/10 done</span><span>Dec 20</span></div>
+          </div>
+          <div class="pj">
+            <div class="top"><span class="nm">Payments v2</span><span class="st bad">Blocked</span></div>
+            <div class="bar"><i class="d" style="width:12%"></i><i class="p" style="width:20%"></i><i class="b" style="width:24%"></i></div>
+            <div class="ft"><span><span class="kind live">👁 epic BIL-2</span> AK</span><span>Jan 9</span></div>
+          </div>
+          <div class="newp">+ New project · Follow a project · Update board ↻</div>
+        </div>
+        <div class="menu" style="top:292px;left:96px" role="presentation">
+          <div class="mi"><span>Open its page</span><span>↗</span></div>
+          <div class="mi"><span>Edit checklist</span><span></span></div>
+          <div class="sep"></div>
+          <div class="mi hl"><span>Create a Jira epic for it</span><span></span></div>
+          <div class="mi"><span>Link to an epic or label…</span><span></span></div>
+          <div class="sep"></div>
+          <div class="mi"><span>Rename</span><span></span></div>
+          <div class="mi"><span>Archive</span><span></span></div>
+        </div>
+      </div>
+      <figcaption>Green tags read their progress live from Jira: an epic's tickets, or every ticket with a label. A checklist project measures itself from its own items, which is where today's todos go. "Create a Jira epic for it" turns its items into tickets of the new epic. The 👁 project is someone else's epic you follow (owner AK).</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section aria-labelledby="decide">
+  <span class="kicker">1b · Plan with Claude</span>
+  <h2 id="decide">How the widget decides, without asking</h2>
+  <p>Each choice takes the first rule that gives an answer. Everything is read from files on your computer, so deciding costs no tokens and takes a fraction of a second.</p>
+  <div class="cols">
+    <div class="note">
+      <h3>Which skill</h3>
+      <ul>
+        <li>The one you last chose with Change for this Jira project.</li>
+        <li>Otherwise a skill whose name or description says Jira or ticket: one in the repository first, then your own, then plugins. A match in the name beats a match in the description.</li>
+        <li>Otherwise the built-in planning prompt.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h3>Which repository</h3>
+      <ul>
+        <li>The one you last chose with Change for this Jira project.</li>
+        <li>Otherwise a folder where you have run Claude Code that has a git branch named after the project's tickets, such as <code>CM-37-retry</code>.</li>
+        <li>Otherwise a folder named like the Jira project.</li>
+        <li>Otherwise your home folder, and the prompt tells Claude the repository is unknown.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h3>Which mode</h3>
+      <ul>
+        <li>Built-in prompt: plan mode, so Claude reads and plans but cannot edit.</li>
+        <li>Your skill: Claude Code's normal mode, so a skill that writes a plan file still works. Claude Code asks before any edit.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="artifact">
+  <span class="kicker">2 · On claude.ai</span>
+  <h2 id="artifact">One artifact: the projects board and a page per project</h2>
+  <p>A single artifact holds the board of all projects and a view per project. The widget links to a view with a plain <code>#name</code> at the end of the artifact's address (for example <code>#cm</code>), the only kind of deep link artifacts pass to the page.</p>
+
+  <div class="browser" aria-label="Mockup: projects board artifact">
+    <div class="bar-top"><i></i><i></i><i></i><span class="url">claude.ai/artifact/…  #board</span></div>
+    <div class="art">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap">
+        <h3>Projects</h3><span class="sub">Jira live · refresh ↻ · checklists updated 1 h ago · 4 projects</span>
+      </div>
+      <div class="board">
+        <div class="col"><h4>Not started<span>0</span></h4></div>
+        <div class="col"><h4>In progress<span>3</span></h4>
+          <div class="card"><span class="nm">Claude Meter</span><div class="bar"><i class="d" style="width:58%"></i><i class="p" style="width:30%"></i><i class="b" style="width:4%"></i></div><div class="ft"><span><span class="kind live">epic</span> 14/22</span><span>Dec 12</span></div></div>
+          <div class="card"><span class="nm">Release 1.2</span><div class="bar"><i class="d" style="width:31%"></i><i class="p" style="width:44%"></i><i class="b" style="width:9%"></i></div><div class="ft"><span><span class="kind live">label</span> 5/16</span><span style="color:var(--w-p2)">Nov 28 · at risk</span></div></div>
+          <div class="card"><span class="nm">Home office move</span><div class="bar"><i class="d" style="width:60%"></i></div><div class="ft"><span><span class="kind">checklist</span> 6/10</span><span>Dec 20</span></div></div>
+        </div>
+        <div class="col"><h4>Blocked<span>1</span></h4>
+          <div class="card bad"><span class="nm">Payments v2</span><div class="bar"><i class="d" style="width:12%"></i><i class="p" style="width:20%"></i><i class="b" style="width:24%"></i></div><div class="ft"><span><span class="kind live">👁 epic</span> 4 blocked</span><span>Jan 9</span></div></div>
+        </div>
+        <div class="col"><h4>Done<span>0</span></h4></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="browser" aria-label="Mockup: one project's page">
+    <div class="bar-top"><i></i><i></i><i></i><span class="url">claude.ai/artifact/…  #cm</span></div>
+    <div class="art">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap">
+        <h3>Claude Meter</h3><span class="sub">epic CM-1 · due Dec 12 · 22 tickets</span>
+      </div>
+      <div class="detail">
+        <div class="panel">
+          <h4>What it is</h4>
+          <div class="ring">
+            <svg viewBox="0 0 42 42" role="img" aria-label="64 percent of tickets done">
+              <circle cx="21" cy="21" r="15.9" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="4"></circle>
+              <circle class="arc" cx="21" cy="21" r="15.9" fill="none" stroke="#4fbf8a" stroke-width="4" stroke-linecap="round" pathLength="100" stroke-dashoffset="36" transform="rotate(-90 21 21)"></circle>
+              <text x="21" y="24" text-anchor="middle" font-size="9" fill="#eef1f6" font-family="IBM Plex Mono, monospace">64%</text>
+            </svg>
+            <p style="font-size:13px">Floating widget for Claude usage, Claude Code sessions and Jira work, on Linux, macOS and Windows.</p>
+          </div>
+        </div>
+        <div class="panel done"><h4>Done · 14</h4><ul><li>Runs on all three systems, tested in CI</li><li>npm package and <code style="background:none;color:inherit">claude-meter</code> command</li><li>Drag the widget by its header</li></ul></div>
+        <div class="panel"><h4>Remaining · 7</h4><ul><li>CM-41 Show Jira tickets in the widget</li><li>CM-42 Move a ticket from its menu</li><li>CM-44 Projects tab</li></ul></div>
+        <div class="panel block"><h4>Blocking · 1</h4><ul><li>CM-36 npm scope and login for publishing, blocks CM-37</li></ul></div>
+        <div class="panel next" style="grid-column:1 / -1"><h4>Next step</h4><p style="font-size:13px">Finish the spike on the Atlassian connector, then build the read-only Jira tab (CM-41) before the menu actions.</p><span class="ai">written by Claude on click · kept until the tickets change</span></div>
+      </div>
+    </div>
+  </div>
+  <p class="meta">Done, remaining, blocking and due dates are worked out by the page's own code from the Jira data. Only the "Next step" sentence comes from Claude.</p>
+  <div class="cols">
+    <div class="note">
+      <h3>Epic and label projects: live</h3>
+      <p>The page reads their tickets from Jira itself. They are always current, and nobody has to send anything.</p>
+    </div>
+    <div class="note">
+      <h3>Checklist projects: sent on change</h3>
+      <p>Their items are todos on your computer, which the page cannot read. Listing them in the widget costs nothing. They reach the board only when you press <strong>Update board</strong> in the Projects tab. Ally copies them to your clipboard and opens the board at <code>#name~paste</code>; you click the paste box and press ⌘V, and the page keeps the copy in its own private storage (the artifact's db) until the next update. No Claude, no tokens, nothing written to Atlassian. The address itself cannot carry them: claude.ai drops a <code>#part</code> longer than about 100 to 250 characters.</p>
+    </div>
+    <div class="note">
+      <h3>Followed projects: Jira only</h3>
+      <p>You can follow someone else's epic or label, which Jira knows about. A checklist project exists only on its owner's computer, so others cannot follow it until it gets an epic.</p>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="flow">
+  <span class="kicker">3 · How it fits together</span>
+  <h2 id="flow">Who talks to whom, and what each hop costs</h2>
+  <figure>
+    <svg viewBox="0 0 960 470" role="img" aria-label="The widget reads Jira directly over REST at no token cost, opens a terminal running Claude Code in plan mode, and opens the projects artifact in the browser. The artifact reads Jira through the viewer's Atlassian connector at no token cost and asks Claude only for the next-step summary, on click.">
+      <defs>
+        <marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"></path></marker>
+        <marker id="arwA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#d06a4f"></path></marker>
+      </defs>
+      <g font-family="IBM Plex Sans, system-ui, sans-serif" font-size="13" fill="currentColor">
+        <!-- boxes -->
+        <rect x="20" y="170" width="210" height="100" rx="10" fill="none" stroke="currentColor" stroke-width="1.5"></rect>
+        <text x="125" y="207" text-anchor="middle" font-weight="600" font-size="14">Ally widget</text>
+        <text x="125" y="228" text-anchor="middle" opacity=".7">main process, refresh on demand</text>
+        <text x="125" y="248" text-anchor="middle" opacity=".7">API token in OS keychain</text>
+
+        <rect x="340" y="30" width="270" height="80" rx="10" fill="none" stroke="#d06a4f" stroke-width="1.8"></rect>
+        <text x="475" y="62" text-anchor="middle" font-weight="600" font-size="14">Terminal: Claude Code</text>
+        <text x="475" y="84" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11.5" opacity=".8">--permission-mode plan</text>
+
+        <rect x="710" y="170" width="230" height="100" rx="10" fill="none" stroke="currentColor" stroke-width="1.5"></rect>
+        <text x="825" y="212" text-anchor="middle" font-weight="600" font-size="14">Jira Cloud</text>
+        <text x="825" y="234" text-anchor="middle" opacity=".7">tickets, epics, transitions</text>
+
+        <rect x="340" y="320" width="270" height="80" rx="10" fill="none" stroke="currentColor" stroke-width="1.5"></rect>
+        <text x="475" y="352" text-anchor="middle" font-weight="600" font-size="14">Projects artifact (browser)</text>
+        <text x="475" y="374" text-anchor="middle" opacity=".7">board + one view per project</text>
+
+        <rect x="710" y="320" width="230" height="80" rx="10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="5 4"></rect>
+        <text x="825" y="352" text-anchor="middle" font-weight="600" font-size="14">Your Atlassian connector</text>
+        <text x="825" y="374" text-anchor="middle" opacity=".7">claude.ai, your Jira login</text>
+
+        <!-- widget -> jira -->
+        <line x1="230" y1="205" x2="706" y2="205" stroke="currentColor" stroke-width="1.5" marker-end="url(#arw)"></line>
+        <text x="468" y="196" text-anchor="middle">REST: search on open or refresh, moves on click</text>
+        <text x="468" y="226" text-anchor="middle" fill="#2f8f63" font-weight="600">0 Claude tokens</text>
+
+        <!-- widget -> terminal -->
+        <polyline points="125,170 125,70 336,70" fill="none" stroke="#d06a4f" stroke-width="1.6" marker-end="url(#arwA)"></polyline>
+        <text x="135" y="120">opens with a prompt</text>
+        <text x="135" y="138">built from the ticket</text>
+        <text x="620" y="62" fill="#d06a4f" font-weight="600">tokens: the plan itself</text>
+
+        <!-- widget -> artifact -->
+        <polyline points="125,270 125,345 336,345" fill="none" stroke="currentColor" stroke-width="1.5" marker-end="url(#arw)"></polyline>
+        <text x="135" y="310">opens its address #cm</text>
+        <polyline points="90,270 90,385 336,385" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arw)"></polyline>
+        <text x="100" y="408">Update board: clipboard, then ⌘V</text>
+
+        <!-- artifact -> connector -> jira -->
+        <line x1="610" y1="360" x2="706" y2="360" stroke="currentColor" stroke-width="1.5" marker-end="url(#arw)"></line>
+        <text x="658" y="350" text-anchor="middle">reads</text>
+        <text x="658" y="382" text-anchor="middle" fill="#2f8f63" font-weight="600">0 tokens</text>
+        <line x1="825" y1="320" x2="825" y2="274" stroke="currentColor" stroke-width="1.5" marker-end="url(#arw)"></line>
+
+        <!-- artifact -> claude summary -->
+        <line x1="475" y1="400" x2="475" y2="430" stroke="#d06a4f" stroke-width="1.6" stroke-dasharray="4 4"></line>
+        <text x="475" y="452" text-anchor="middle" fill="#d06a4f">asks Claude for "next step" on click, kept until tickets change</text>
+      </g>
+    </svg>
+    <figcaption>Only the orange paths use Claude: planning a ticket and the one-sentence next step. Checklist projects reach the page through the clipboard. Reading, following and moving tickets never does.</figcaption>
+  </figure>
+</section>
+
+<section aria-labelledby="cost">
+  <span class="kicker">4 · Performance and token cost</span>
+  <h2 id="cost">What each feature costs</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Feature</th><th>Where it runs</th><th>Claude tokens</th><th>Jira calls</th><th>How it stays light</th></tr></thead>
+      <tbody>
+        <tr><td>Jira tab</td><td>Widget</td><td><span class="tag zero">none</span></td><td>1 search when the tab opens or you press refresh</td><td>Mine, Following and your labels are one Jira query; todos are local. It asks only for the 9 fields shown, at most 100 tickets, and after the first load only for tickets changed since the last search.</td></tr>
+        <tr><td>Move, follow a ticket</td><td>Widget</td><td><span class="tag zero">none</span></td><td>1 read when the menu opens, 1 write</td><td>Allowed moves are fetched only for the ticket you right-click. Following is one watcher write.</td></tr>
+        <tr><td>Choose skill and repository</td><td>Widget</td><td><span class="tag zero">none</span></td><td>none</td><td>Reads only the top lines of each skill file and the branch names of folders where Claude Code ran. Kept for a day, so a click starts the terminal at once.</td></tr>
+        <tr><td>Plan with Claude</td><td>Terminal</td><td><span class="tag real">the planning session</span></td><td>1 read</td><td>Your skill or the built-in prompt gets the trimmed ticket, so Claude does not spend turns fetching it.</td></tr>
+        <tr><td>Projects tab</td><td>Widget</td><td><span class="tag zero">none</span></td><td>1 search when the tab opens or you press refresh</td><td>One search counts the tickets of every linked epic and label by status. Checklists are local.</td></tr>
+        <tr><td>Checklist projects on the board</td><td>Clipboard, pasted into the artifact</td><td><span class="tag zero">none</span></td><td>none</td><td>Update board copies them; one click and ⌘V on the board saves them in the artifact's db. A <code>claude -p</code> run was the first plan, but it has no artifacts tools.</td></tr>
+        <tr><td>Board and project pages</td><td>Artifact in the browser</td><td><span class="tag zero">none</span></td><td>Through your connector, on open or refresh</td><td>The page loads from its cache, then refreshes once on open and when you press refresh. No polling.</td></tr>
+        <tr><td>"Next step" text</td><td>Artifact</td><td><span class="tag small">a short answer, on click</span></td><td>none</td><td>Uses the quickest model, sends only the counts and titles, and is kept until the project's tickets change.</td></tr>
+        <tr><td>Building the artifact</td><td>A Claude session, once</td><td><span class="tag small">one time</span></td><td>none</td><td>New tickets and projects show up by themselves. Claude is needed again only to change the design.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="cols">
+    <div class="note">
+      <h3>Why the widget reads Jira itself</h3>
+      <p>Asking Claude to fetch tickets through the Atlassian connector costs tokens on every refresh, because each answer comes back as long JSON that Claude reads. A direct REST call costs nothing and is faster. Atlassian's new points-based rate limits apply to apps, while personal API-token scripts keep only the short burst limits, so searching on open and on refresh is far below any cap.</p>
+    </div>
+    <div class="note">
+      <h3>Why one artifact and not one per project</h3>
+      <p>Every artifact has to be written and kept up to date by Claude. One page that reads Jira live and routes on <code>#name</code> is written once; a new project appears on it with no Claude involved.</p>
+    </div>
+    <div class="note">
+      <h3>Signing in to Jira from the widget</h3>
+      <p>The widget cannot use your claude.ai connector, so it needs its own access. An Atlassian API token (site, email, token) is the simple choice for a personal tool. It is stored with the system keychain through Electron. OAuth would need a registered app and a server, which a local widget does not have.</p>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="risks" id="risks">
+  <span class="kicker">5 · Unknowns</span>
+  <h2>What the spike has to prove first</h2>
+  <div class="risks">
+    <div class="risk"><h3>The connector inside the artifact</h3><p>Artifacts may call your claude.ai connectors, but I have not seen the exact tool names and arguments the page must use for Jira, nor whether connector calls from a page have their own limits. A known issue reports broken paging in the Atlassian connector's search. If this fails, the page falls back to data the widget publishes, which costs a little Claude per update.</p></div>
+    <div class="risk"><h3>Deep links into one project</h3><p>Artifacts pass a plain <code>#name</code> to the page when opened on their own page. Opened beside a chat or in an app, the hash may not reach it. The spike checks that a widget click lands on the right project.</p></div>
+    <div class="risk"><h3>Opening a terminal everywhere</h3><p>macOS (Terminal and iTerm2) and Windows (Windows Terminal, else a console window) are well understood. Linux depends on the terminal installed: gnome-terminal, konsole, or the system default.</p></div>
+    <div class="risk"><h3>What "blocked" means</h3><p>The design counts a ticket as blocked when it has an open "is blocked by" link or the Flagged field set. Teams use Jira differently, so this rule should be a setting.</p></div>
+    <div class="risk"><h3>Guessing the skill and repository</h3><p>None of the 81 skills on this computer is about Jira today; six mention "issues" in other senses, such as code issues. That is why the rules match only "Jira" or "ticket", and why the notice after each click offers Change. Each skill also has to accept a ticket key after its name, the likely case.</p></div>
+    <div class="risk"><h3>Sending checklists to the page</h3><p>This needs Claude Code signed in, with the artifacts connector. The cost of one short run is mostly Claude Code's own start-up context: the spike measures it before checklist projects are built.</p></div>
+  </div>
+</section>
+
+<section aria-labelledby="plan">
+  <span class="kicker">6 · Plan</span>
+  <h2 id="plan">Phases</h2>
+  <p>The same phases are written in the repository, in <code>ROADMAP.md</code>. Each one ships on its own, with tests and CI green on Linux, macOS and Windows.</p>
+  <div class="steps">
+    <div class="step"><div><h3>Phase 0 · Rename to Ally</h3><p>Package, <code>ally</code> command, window title, data folder moved from <code>~/.claude-meter</code>, hooks, launchers and the GitHub repository. Done when an existing install keeps its settings and todos after upgrading.</p></div></div>
+    <div class="step"><div><h3>Phase 1 · Spike, about two days</h3><p>The connector read from an artifact, the <code>#name</code> link, opening a terminal on each system, and the tokens of one Update board run (it could not publish; replaced by the clipboard hand-off). Nothing here ships.</p></div></div>
+    <div class="step"><div><h3>Phase 2 · Tasks tab, read only</h3><p>Jira settings; one search for Mine, Following and labels; status and scope chips; todos in the same list under Personal; refresh on open and with a button.</p></div></div>
+    <div class="step"><div><h3>Phase 3 · Actions</h3><p>Ticket menu (move, plan, follow, follow label, open, copy key), todo menu (send to Jira, add to project, plan), and one-click Plan with Claude.</p></div></div>
+    <div class="step"><div><h3>Phase 4 · Projects tab</h3><p>Epic, label and checklist projects; a checklist project's items are todos; the project menu; following someone else's epic or label.</p></div></div>
+    <div class="step"><div><h3>Phase 5 · Projects board on claude.ai</h3><p>Board and project views, animated, live from Jira with a refresh button; checklist projects through Update board (clipboard and ⌘V, kept in the artifact's db); the next-step sentence on click. Private to you.</p></div></div>
+  </div>
+</section>
+
+<section aria-labelledby="name" id="name">
+  <span class="kicker">7 · Name</span>
+  <h2>Decided: Ally</h2>
+  <p>The app is called <strong>Ally</strong>, its command is <code>ally</code>, and it is published as <code>@helpter-tools/ally</code>. Its description says, in plain text, that it works with Claude Code. That keeps Anthropic's marks out of the name, as its trademark guidelines require for anything not "specifically permitted", while still telling people what it is for.</p>
+  <div class="risks">
+    <div class="risk"><h3>What the rename touches</h3><p>The package name and the <code>ally</code> command; the window title and tray label; the data folder, moved from <code>~/.claude-meter</code> to <code>~/.ally</code> on first start; the hooks in Claude Code's settings; the launchers and start-at-login entries, removed under the old name and added under the new one; the GitHub repository name.</p></div>
+    <div class="risk"><h3>Wording to use</h3><p>"Ally: your usage, sessions, Jira tickets and projects, for Claude Code." No Claude or Anthropic logo, and no wording that suggests Anthropic made or endorses it.</p></div>
+  </div>
+</section>
+
+<section aria-labelledby="questions">
+  <span class="kicker">8 · Decisions</span>
+  <h2 id="questions">Decided</h2>
+  <ol class="qs">
+    <li>The app is <strong>Ally</strong>, command <code>ally</code>.</li>
+    <li>Todos stay, joined with Jira tickets in the <strong>Tasks</strong> tab; a checklist project's items are todos.</li>
+    <li>Nothing refreshes in the background: lists refresh on open and with a refresh button. Checklist projects reach the board only through <strong>Update board</strong>.</li>
+    <li>The board is for you only, so it needs no sharing setup.</li>
+  </ol>
+</section>
+
+<section aria-labelledby="sources">
+  <h2 id="sources" style="font-size:18px">Sources</h2>
+  <ul class="sources">
+    <li><a href="https://developer.atlassian.com/cloud/jira/platform/rate-limiting/">Jira Cloud rate limiting</a> and <a href="https://community.atlassian.com/forums/App-Central-articles/Heads-up-Jira-s-new-API-rate-limits-kick-in-tomorrow-Here-s-how/ba-p/3199366">the points-based limits from March 2026</a></li>
+    <li><a href="https://confluence.atlassian.com/display/JIRAKB/Run+JQL+search+query+using+Jira+Cloud+REST+API">Search moved to /rest/api/3/search/jql</a></li>
+    <li><a href="https://github.com/atlassian/atlassian-mcp-server/issues/118">Paging issue in the Atlassian connector's search</a></li>
+    <li><a href="https://code.claude.com/docs/en/permission-modes">Claude Code permission modes, including plan mode</a></li>
+    <li>Artifact capabilities (connectors, asking Claude, stored data, deep links): claude.ai artifact runtime, contract 0.2.96</li>
+  </ul>
+</section>
+
+</main>
+</body>
+</html>

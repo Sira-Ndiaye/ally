@@ -1,0 +1,71 @@
+{
+  "name": "@helpter-tools/ally",
+  "productName": "ally",
+  "version": "0.1.1",
+  "description": "Always-on-top companion for Claude Code: watch your sessions, answer their prompts, and keep tasks and Jira tickets in sight",
+  "keywords": [
+    "claude-code",
+    "claude",
+    "ai-agents",
+    "developer-tools",
+    "productivity",
+    "jira",
+    "task-manager",
+    "eisenhower-matrix",
+    "widget",
+    "electron"
+  ],
+  "license": "MIT",
+  "author": "Sira Ndiaye",
+  "homepage": "https://github.com/Sira-Ndiaye/ally#readme",
+  "bugs": "https://github.com/Sira-Ndiaye/ally/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sira-Ndiaye/ally.git"
+  },
+  "main": "src/main.js",
+  "bin": {
+    "ally": "bin/cli.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "hook/",
+    "assets/",
+    "board/",
+    "scripts/check-deps.js",
+    "scripts/install-hooks.js",
+    "scripts/install-desktop.js"
+  ],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "start": "node bin/cli.js",
+    "hooks:preview": "node scripts/install-hooks.js",
+    "hooks:install": "node scripts/install-hooks.js --apply",
+    "hooks:remove": "node scripts/install-hooks.js --remove --apply",
+    "desktop:install": "node scripts/install-desktop.js",
+    "desktop:autostart": "node scripts/install-desktop.js --autostart",
+    "desktop:remove": "node scripts/install-desktop.js --remove",
+    "test": "node --test",
+    "smoke": "node scripts/smoke.js",
+    "prepublishOnly": "npm test"
+  },
+  "dependencies": {
+    "dbus-next": "^0.10.2",
+    "electron": "44.11.6"
+  },
+  "overrides": {
+    "xml2js": "^0.6.2",
+    "usocket": "^1.1.0"
+  }
+}
