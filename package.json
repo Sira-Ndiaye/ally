@@ -58,7 +58,7 @@
   },
   "dependencies": {
     "dbus-next": "^0.10.2",
-    "electron": "44.11.6"
+    "electron": "45.4.1"
   },
   "overrides": {
     "xml2js": "^0.6.2",
